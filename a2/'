@@ -1,0 +1,181 @@
+#include <stdio.h>
+#include <string.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <time.h>
+#include <stdlib.h>
+
+//I use two global ints so that I can actually modify the connections outside the function
+int ga = 0;
+int gb = 0;
+
+//Room struct so that each room knows its name, type and connections
+struct Room {
+	char name[10];
+	char type[10];
+	//array of strings of length 10
+	char connections[6][10];
+	int cnum;
+};
+
+void connect(struct Room rooms[7]) {
+	struct Room a;
+	struct Room b;
+	while (1) {
+		ga = rand() % 7;
+		if (rooms[ga].cnum < 2 || rooms[ga].cnum == 6) {
+			break;
+		}
+	}
+	a = rooms[ga];
+	do {
+		gb = rand() % 7;
+		b = rooms[gb];
+	} while(areNotConnected(a,b) == 0 || strcmp(a.name, b.name) == 0 || b.cnum == 6);
+
+	return;
+}
+
+int areNotConnected(struct Room a, struct Room b) {
+	int ii = 0;
+	for(ii = 0; ii < 6; ii ++) {
+		if (strcmp(a.connections[ii], b.name) == 0) {
+			//printf("%s and %s are connected\n", a.name, b.name);
+			return 0;
+		}
+	} //printf("%s and %s are not connected\n", a.name, b.name);
+	return 1;
+}
+
+int isGraphFull(struct Room rooms[7]) {
+	int ii = 0;
+	int go = 0;
+	for(ii = 0; ii < 7; ii ++) {
+	printf("%s has %d connections\n", rooms[ii].name, rooms[ii].cnum);
+		if (rooms[ii].cnum > 2) {
+			go ++;
+		}
+	}
+	printf("--%d rooms with enough connections\n", go);
+	if (go == 7) {
+		return 1;
+	}
+
+	return 0;
+}
+
+//void createRoomFile(struct Room *room, char* path) {
+//	char filedir[40] = "/";
+//	char filename[40];
+//	char* temp;
+//	char filecontents[1000];
+//	sprintf(filename, "%s_room\0", room.name);
+//	sprintf(filedir, "%s/%s", path, filename);
+//	sprintf(filecontents, "ROOM NAME: %s\n", room.name);
+//	int ii = 0;
+//	while(room.connections[ii]
+//
+//	strcpy(filecontents, temp);
+//
+//	FILE *test;
+//	printf("swag");
+//	test = fopen(filedir, "w");
+//	fclose(test);
+//
+//
+//}
+
+int main() {
+
+	//make sure I have a different set of random numbers every time
+	srand(time(NULL));
+
+	//The first thing I do is create the name of the directory
+	int pid = getpid(); //I get the process ID as an integer
+	//I purposely make the dir string way longer than 
+	//it needs to be as a failsafe
+	char dir[25];
+	//sprintf concatenates the PID onto the directory 
+	sprintf(dir, "kauffmza.rooms.%d\0", pid);
+	//mkdir(dir, 0755);
+ 
+	//Next I create all possible room names
+	char names[10][10];
+	
+	strcpy(names[0], "cool\0");
+	strcpy(names[1], "damp\0");
+	strcpy(names[2], "gross\0");
+	strcpy(names[3], "ABC\0");
+	strcpy(names[4], "XYZ\0");
+	strcpy(names[5], "backpack\0");
+	strcpy(names[6], "swagger\0");
+	strcpy(names[7], "Epic\0");
+	strcpy(names[8], "large\0");
+	strcpy(names[9], "marge\0");
+
+	//Array for storing Room structs
+	struct Room rooms[7];
+
+	int takenSpots[7] = {88,88,88,88,88,88,88};
+	int ii = 0;
+	int jj = 0;
+	int num = 0;
+	int unique = 1;	
+
+	//Fill the array with rooms of random names
+	while(jj < 7) {
+		num = rand() % 10;
+		unique = 1;
+		for(ii = 0; ii < 8; ii ++) {
+			if (num == takenSpots[ii]) {
+				//ensures there are no duplicate names
+				unique = 0;
+				break;
+			}
+		}
+
+		if(unique == 1) {
+			takenSpots[jj] = num;
+			strcpy(rooms[jj].name, names[num]);
+			rooms[jj].cnum = 0;
+			int kk = 0;
+			for(kk = 0; kk < 6; kk ++) {
+				strcpy(rooms[jj].connections[jj], "\0");
+			}
+	
+			if (jj == 0) {
+				//First room is always the start
+				strcpy(rooms[jj].type, "START_ROOM\0");
+				jj ++;
+			} else if (jj == 1) {
+				//Second room is always the end
+				strcpy(rooms[jj].type, "END_ROOM\0");
+				jj ++;
+			} else {
+				strcpy(rooms[jj].type, "MID_ROOM\0");
+				jj ++;
+			}
+		}
+	}
+
+	int c = 0;
+	//Connect rooms to each other until all rooms have at least 3 connections
+	while(isGraphFull(rooms) == 0) {
+		connect(rooms);
+		
+		strcpy(rooms[ga].connections[rooms[ga].cnum], rooms[gb].name);
+		strcpy(rooms[gb].connections[rooms[gb].cnum], rooms[ga].name);
+		
+		rooms[ga].cnum ++;
+		rooms[gb].cnum ++;
+		
+		printf("\n--Connected %s and %s\n\n", rooms[ga].name, rooms[gb].name);
+		c ++;
+		printf("%d\n", c);
+	}
+
+return 0;
+}
+
+

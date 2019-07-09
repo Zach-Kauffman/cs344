@@ -1,0 +1,232 @@
+#!/bin/bash
+
+#
+#
+#NOTE FOR TA:
+#THE LAST LINE OF THE GRADING SCRIPT TAKES A FULL 
+#MINUTE OR TWO TO GET THROUGH BUT IT WORKS OK
+#
+#
+
+
+#dims
+#PURPOSE: Find the dimension of a given matrix
+
+#Uses WC to find the length and width
+#Lines = height
+#Words / Lines = width
+
+dims() {
+
+	if [ $# -gt 1 ]
+		then echo "ERR: Too many args" >&2
+		return 1
+	fi
+	
+	swag="${1:-/dev/stdin}"
+	
+	lines=$(wc -l < $swag)
+	words=$(wc -w < $swag)
+	
+	#Dividing the words by the lines gives the row length
+	#Lines is equivalent to the number of rows already
+	words=$(expr $words / $lines)
+	echo "$lines $words"
+	return 0
+}
+
+#transpose
+#PURPOSE: Transpose a matrix across the diagonal
+
+#Cuts each column and displays it in a single line
+transpose() {
+	if [ $# -gt 1 ]
+		then echo "ERR: Too many args" >&2
+		return 1
+	fi
+
+
+		
+	wc $1 > temp
+	read lines words characters name < temp
+	words=$(expr $words / $lines)
+	rm -f temp
+	i=1
+	#Source: www.thelinuxrain.com/articles/transposing-rows-and-columns-3-methods
+	while [ $i -lt $(expr 1 + $words) ]
+		do cut -f $i $1 | paste -s
+		((i++))
+	done
+	return 0
+}
+
+#mean
+#PURPOSE: Find the mean of a matrix
+
+#Iterates across the row with the first while loop
+#Nested while loop iterates down, calculates the mean and displays it
+mean() {
+
+	if [ $# -gt 1 ]
+		then echo "ERR: Too many args" >&2
+		return 1
+	fi
+	wc $1 > temp
+	read lines words characters name < temp
+	length=$words
+	words=$(expr $words / $lines)
+	read -d $'\0' -a arr < $1
+	rm -f temp
+	i=0
+	idx=0
+	mean=0
+	line=$(($words - 1))	
+	#While loops iterates through first row
+	while [ $i -lt $words ]
+		do idx=$i
+		#While loop iterates down through the column
+		while [ $idx -lt $length ]
+			do mean=$(($mean + ${arr[$idx]}))
+			idx=$(($idx + $words))
+		done
+		mean=$(($mean / $lines))
+		#I couldn't get the proper division to work but let the record show that I tried	
+		#mean=$(( ($mean + ($lines/2)*( ($mean\>0)*2-1 )) / $lines  )) 
+		echo -n "$mean"
+		if [ $i -lt $line ] 
+			then echo -ne "\t"
+		fi
+		((i++))
+	done
+	echo	
+	return 0
+}
+
+#add
+#PURPOSE: Adds two matrices together
+
+#Creates two arrays with the values for each matrix
+#Iterates through them and adds values together
+#Calculates line breaks using the length of the matrix
+add() {
+	if [ $# -ne 2 ]
+		then echo "ERR: Incorrect args" >&2
+		return 1
+	fi
+	if [ $# -lt 1 ]
+		then echo "ERR: No args" >&2
+		return 1
+	fi		
+	wc $1 > temp
+	read lines words characters name < temp
+	words=$(expr $words / $lines)
+	wc $2 > temp2
+	read lines2 words2 characters2 name2 < temp2
+	words2=$(expr $words2 / $lines2)
+	rm -f temp
+	rm -f temp2
+	tab=1
+	#Checks that both matrices are the same dimension before adding
+	if [ $words == $words2 -a $lines == $lines2 ]
+		#Fill two arrays with all values from the matrices
+		then read -d $'\0' -a arr1 < $1
+		read -d $'\0' -a arr2 < $2
+		i=0
+		for val in "${arr1[@]}"
+			do val2=${arr2[$i]}
+			val2=$(expr $val + $val2 )
+			((i++))
+			echo -n "$val2"
+			#If not the last number on the line, add a space
+			if [ $tab -ne $words2 ]
+				then echo -ne "\t"
+				((tab++))
+			else tab=1
+			fi
+			#If i > width, linebreak
+			if [ $i == $words ]
+				then echo 
+				#Increment words
+				words=$( expr $words + $words2 )
+			fi
+		
+			
+		done
+	
+	else echo "ERR: Matrices not same dimensions" >&2
+		return 1
+	fi
+	return 0
+}
+
+#multiply
+#PURPOSE: Multiply two vectors together
+
+#Triple nested while loop
+#FIrst loop loops once for each row in the solution and calculates linebreaks
+#Second loop iterates through the first matrix
+#Third loop iterates through the second matrix and calculates the product
+multiply() {
+
+	wc $1 > temp
+	read lines words characters name < temp
+	words=$(expr $words / $lines)
+	wc $2 > temp2
+	read lines2 words2 characters2 name2 < temp2
+	words2=$(expr $words2 / $lines2)
+	rm -f temp
+	rm -f temp2
+	linebreak=1
+	
+	#Put values in two arrays
+	if [ $lines == $words2 ]
+		then read -d $'\0' -a arr1 < $1
+		read -d $'\0' -a arr2 < $2
+		big=0
+		i=0
+		j=0
+		k=0
+		stop1=$lines
+		while [ $big -lt $lines ]
+			do while [ $i -lt $stop1 ]
+				do total=0
+				j=0
+				while [ $j -lt $lines2 ]
+					do loc=$(($j * $words2))
+					loc2=$(($j + $big * $words))
+					if [ $i -ne $(($big * $words)) ]
+						then 
+						loc=$(expr $k + $loc)
+					fi
+					val1="${arr1[$loc2]}"
+					val2="${arr2[$loc]}"
+	
+					total2=$(($val1 * $val2))
+					total=$(expr $total + $total2)
+					((j++))
+				done
+				echo -n "$total"
+				if [ $linebreak -ne $lines ]
+					then echo -ne "\t"
+					((linebreak++))	
+				else linebreak=1
+				fi
+				((k++))
+				((i++))
+			done
+			echo 
+			((big++))
+			k=0
+			i=$stop1
+			stop1=$(expr $stop1 + $lines)
+			j=0
+		done
+	#Check if matrices are compatible
+	else echo "ERR: Misaligned matrices" >&2
+		return 1
+	fi
+	return 0
+}
+
+#Runs the function with all args
+"$@"
